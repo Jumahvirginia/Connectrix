@@ -133,15 +133,24 @@ export default function App() {
     };
   }, []);
 
+  const generateRoomCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars like 0, O, 1, I
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const handleJoin = () => {
     if (!username || (gameMode === "pvp" && !roomCode)) return;
-    const finalRoomCode = gameMode === "solo" ? `SOLO-${Math.random().toString(36).substring(7).toUpperCase()}` : roomCode.toUpperCase();
+    const finalRoomCode = gameMode === "solo" ? `SOLO-${Math.random().toString(36).substring(2, 6).toUpperCase()}` : roomCode.toUpperCase();
     socket.emit("join-room", { roomCode: finalRoomCode, name: username, color: selectedColor, mode: gameMode });
   };
 
   const handleCreate = () => {
     if (!username) return;
-    const newCode = Math.random().toString(36).substring(7).toUpperCase();
+    const newCode = generateRoomCode();
     setRoomCode(newCode);
     socket.emit("join-room", { roomCode: newCode, name: username, color: selectedColor, mode: gameMode });
     // After joining, if we are the first one, we can update settings
@@ -151,11 +160,19 @@ export default function App() {
   };
 
   const copyToClipboard = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("room", roomCode);
-    navigator.clipboard.writeText(url.toString());
-    setHasCopied(true);
-    setTimeout(() => setHasCopied(false), 2000);
+    try {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const url = new URL(baseUrl);
+      url.searchParams.set("room", roomCode);
+      
+      // Attempt to copy the link
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        setHasCopied(true);
+        setTimeout(() => setHasCopied(false), 2000);
+      });
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
   };
 
   const fetchLeaderboard = async () => {
@@ -244,7 +261,7 @@ export default function App() {
                   className={cn("premium-button px-10 shadow-lg", isDarkMode ? "bg-white text-charcoal-bg" : "bg-black text-white")}
                 >
                   <Users className="w-4 h-4" />
-                  Invite a Friend
+                  Invite a Friend/Join
                 </button>
                 <button 
                   onClick={() => { setGameMode("solo"); setView("setup"); }}
