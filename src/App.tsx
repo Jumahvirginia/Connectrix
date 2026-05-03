@@ -162,12 +162,6 @@ export default function App() {
   const copyToClipboard = () => {
     if (!roomCode) return;
     
-    // Construct URL with explicit origin and protocol
-    const protocol = window.location.protocol;
-    const host = window.location.host;
-    const pathname = window.location.pathname;
-    const url = `${protocol}//${host}${pathname}?room=${roomCode}`;
-    
     const doCopy = (text: string) => {
       // Modern API
       if (navigator.clipboard && window.isSecureContext) {
@@ -194,7 +188,7 @@ export default function App() {
       });
     };
 
-    doCopy(url).then(() => {
+    doCopy(roomCode).then(() => {
       setHasCopied(true);
       setTimeout(() => setHasCopied(false), 2000);
     }).catch(err => {
