@@ -260,9 +260,9 @@ async function startServer() {
       }
     });
 
-    socket.on("disconnect", () => {
+    const handleLeave = (socketId: string) => {
       rooms.forEach((room, roomCode) => {
-        const playerIndex = room.players.findIndex(p => p.id === socket.id);
+        const playerIndex = room.players.findIndex(p => p.id === socketId);
         if (playerIndex !== -1) {
           room.players.splice(playerIndex, 1);
           room.status = "waiting";
@@ -273,6 +273,15 @@ async function startServer() {
           if (room.players.length === 0) rooms.delete(roomCode);
         }
       });
+    };
+
+    socket.on("leave-room", (roomCode) => {
+      socket.leave(roomCode);
+      handleLeave(socket.id);
+    });
+
+    socket.on("disconnect", () => {
+      handleLeave(socket.id);
     });
   });
 

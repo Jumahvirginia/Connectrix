@@ -121,6 +121,12 @@ export default function App() {
       if (updatedState.status === "playing") setView("game");
       else if (updatedState.status === "waiting") setView("room");
       setPreferredTurnDuration(updatedState.turnDuration);
+
+      // Sync color from server (in case of auto-correction)
+      const me = updatedState.players.find(p => p.id === (socket.id || myId));
+      if (me && me.color !== selectedColor) {
+        setSelectedColor(me.color);
+      }
     });
 
     socket.on("error", (msg: string) => {
@@ -166,6 +172,14 @@ export default function App() {
 
   const currentOpponent = gameState?.players.find(p => p.id !== socket.id);
   const takenColor = currentOpponent?.color;
+
+  const handleExit = () => {
+    if (roomCode) {
+      socket.emit("leave-room", roomCode);
+    }
+    setView("landing");
+    setGameState(null);
+  };
 
   const copyToClipboard = () => {
     if (!roomCode) return;
@@ -241,7 +255,7 @@ export default function App() {
       <nav className="fixed top-0 w-full z-50 p-6 md:px-12 flex justify-between items-center bg-transparent backdrop-blur-sm">
         <div 
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => setView("landing")}
+          onClick={handleExit}
         >
           <LayoutGrid className={cn("w-7 h-7", isDarkMode ? "text-blue-500" : "text-blue-600")} />
           <span className="font-display font-black text-xl tracking-tight uppercase">Connectrix</span>
@@ -399,7 +413,7 @@ export default function App() {
                 >
                   {gameMode === "solo" ? "Start Game" : "Connect Now"}
                 </button>
-                <button onClick={() => setView("landing")} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-400">
+                <button onClick={handleExit} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-400">
                   Back to Menu
                 </button>
               </div>
@@ -491,7 +505,7 @@ export default function App() {
                 )}
               </div>
 
-              <button onClick={() => setView("landing")} className="text-xs font-bold text-rose-500 uppercase tracking-widest flex items-center gap-2 mx-auto hover:grayscale-0 transition-all opacity-70 hover:opacity-100">
+              <button onClick={handleExit} className="text-xs font-bold text-rose-500 uppercase tracking-widest flex items-center gap-2 mx-auto hover:grayscale-0 transition-all opacity-70 hover:opacity-100">
                 <LogOut className="w-4 h-4" /> Cancel Session
               </button>
             </motion.div>
@@ -723,7 +737,7 @@ export default function App() {
                     <RefreshCw className="w-5 h-5 opacity-60" />
                   </button>
                   <button 
-                    onClick={() => setView("landing")}
+                    onClick={handleExit}
                     className={cn("px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] md:text-xs transition-all hover:scale-105 active:scale-95", isDarkMode ? "bg-rose-500/10 text-rose-500" : "bg-rose-50")}
                   >
                     Resign Match
@@ -812,7 +826,7 @@ export default function App() {
                            Play Again
                          </button>
                          <button 
-                          onClick={() => setView("landing")} 
+                          onClick={handleExit} 
                           className={cn(
                             "w-full py-4 px-8 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
                             isDarkMode
@@ -842,7 +856,7 @@ export default function App() {
                   <h1 className="text-6xl font-display font-black tracking-tight uppercase">Hall of Fame</h1>
                   <p className="text-slate-500 font-medium">Top performing strategists.</p>
                 </div>
-                <button onClick={() => setView("landing")} className={cn("p-4 rounded-2xl transition-colors shrink-0", cardClass)}>
+                <button onClick={handleExit} className={cn("p-4 rounded-2xl transition-colors shrink-0", cardClass)}>
                   <ArrowLeft className="w-6 h-6" />
                 </button>
               </div>
@@ -907,7 +921,7 @@ export default function App() {
                   <h2 className="text-2xl font-display font-black uppercase tracking-tight">Settings</h2>
                   <p className="text-sm font-medium text-slate-500">Personalize your environment.</p>
                 </div>
-                <button onClick={() => setView("landing")} className="p-2 opacity-60 hover:opacity-100">
+                <button onClick={handleExit} className="p-2 opacity-60 hover:opacity-100">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               </div>
@@ -986,7 +1000,7 @@ export default function App() {
               </div>
 
               <div className="text-center pt-4">
-                 <button onClick={() => setView("landing")} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-400">
+                 <button onClick={handleExit} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-400">
                    Back to Dashboard
                  </button>
               </div>
