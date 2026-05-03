@@ -136,8 +136,17 @@ async function startServer() {
       }
 
       if (room.players.length < 2) {
+        // Ensure color uniqueness
+        let finalColor = color;
+        const takenColors = room.players.map(p => p.color);
+        if (takenColors.includes(finalColor)) {
+          const standardColors = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
+          const available = standardColors.find(c => !takenColors.includes(c));
+          finalColor = available || `#${Math.floor(Math.random()*16777215).toString(16)}`;
+        }
+
         const symbol = room.players.length === 0 ? "X" : "O";
-        room.players.push({ id: socket.id, name, color, symbol });
+        room.players.push({ id: socket.id, name, color: finalColor, symbol });
         
         if (room.gameMode === "solo" && room.players.length === 1) {
           room.players.push({ id: "cpu", name: "AI", color: "#94a3b8", symbol: "O" });
@@ -148,6 +157,18 @@ async function startServer() {
         io.to(roomCode).emit("room-update", room);
       } else {
         socket.emit("error", "Room is full");
+      }
+    });
+
+    socket.on("update-color", ({ roomCode, color }) => {
+      const room = rooms.get(roomCode);
+      if (room) {
+        const player = room.players.find(p => p.id === socket.id);
+        const otherPlayer = room.players.find(p => p.id !== socket.id);
+        if (player && (!otherPlayer || otherPlayer.color !== color)) {
+          player.color = color;
+          io.to(roomCode).emit("room-update", room);
+        }
       }
     });
 

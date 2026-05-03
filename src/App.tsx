@@ -159,6 +159,14 @@ export default function App() {
     }, 500);
   };
 
+  const handleUpdateColor = (color: string) => {
+    setSelectedColor(color);
+    socket.emit("update-color", { roomCode, color });
+  };
+
+  const currentOpponent = gameState?.players.find(p => p.id !== socket.id);
+  const takenColor = currentOpponent?.color;
+
   const copyToClipboard = () => {
     if (!roomCode) return;
     
@@ -418,14 +426,20 @@ export default function App() {
 
               <div className="flex flex-col gap-8">
                 <div className="flex justify-center gap-10">
-                  {gameState?.players.map((p) => (
-                    <div key={p.id} className="flex flex-col items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl shadow-xl flex items-center justify-center p-1" style={{ backgroundColor: p.color }}>
-                          <div className="w-full h-full rounded-xl border border-white/20 shadow-inner" />
-                        </div>
-                        <span className="font-display font-bold text-sm uppercase text-slate-400 tracking-wider truncate w-24">{p.name}</span>
-                    </div>
-                  ))}
+                  {gameState?.players.map((p) => {
+                    const isMe = p.id === socket.id;
+                    return (
+                      <div key={p.id} className="flex flex-col items-center gap-4">
+                          <div className="relative group">
+                            <div className="w-20 h-20 rounded-2xl shadow-xl flex items-center justify-center p-1 transition-transform group-hover:scale-105" style={{ backgroundColor: p.color }}>
+                              <div className="w-full h-full rounded-xl border border-white/20 shadow-inner" />
+                            </div>
+                            {isMe && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-lg ring-2 ring-white">YOU</div>}
+                          </div>
+                          <span className="font-display font-bold text-sm uppercase text-slate-400 tracking-wider truncate w-24">{p.name}</span>
+                      </div>
+                    );
+                  })}
                   {gameState?.players.length === 1 && (
                     <div className="flex flex-col items-center gap-4 opacity-30 animate-pulse">
                         <div className={cn("w-20 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center", isDarkMode ? "border-white/20" : "border-slate-300")}>
@@ -434,6 +448,34 @@ export default function App() {
                         <span className="font-display font-bold text-sm uppercase tracking-wider italic">Awaiting...</span>
                     </div>
                   )}
+                </div>
+
+                {/* Live Color Picker in Room */}
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Customize Your Color</p>
+                  <div className="flex justify-center gap-3">
+                    {ACCENT_COLORS.map((color) => {
+                      const isTaken = takenColor === color.hex;
+                      const isSelected = gameState?.players.find(p => p.id === socket.id)?.color === color.hex;
+                      
+                      return (
+                        <button
+                          key={color.hex}
+                          onClick={() => !isTaken && handleUpdateColor(color.hex)}
+                          disabled={isTaken}
+                          className={cn(
+                            "w-10 h-10 rounded-xl transition-all relative overflow-hidden",
+                            isSelected ? "ring-2 ring-blue-500 ring-offset-4 ring-offset-charcoal-bg scale-110" : "hover:scale-105 active:scale-95",
+                            isTaken ? "opacity-20 cursor-not-allowed grayscale" : "opacity-100"
+                          )}
+                          style={{ backgroundColor: color.hex }}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-white mx-auto" />}
+                          {isTaken && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><div className="w-4 h-0.5 bg-white rotate-45" /><div className="w-4 h-0.5 bg-white -rotate-45" /></div>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {gameState?.players.length === 2 && gameState.status === 'waiting' && socket.id === gameState.players[0].id && (
