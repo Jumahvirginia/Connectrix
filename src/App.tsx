@@ -160,19 +160,42 @@ export default function App() {
   };
 
   const copyToClipboard = () => {
-    try {
-      const baseUrl = window.location.origin + window.location.pathname;
-      const url = new URL(baseUrl);
-      url.searchParams.set("room", roomCode);
-      
-      // Attempt to copy the link
-      navigator.clipboard.writeText(url.toString()).then(() => {
+    if (!roomCode) return;
+    const url = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+    
+    // Check if we can use the modern clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(() => {
         setHasCopied(true);
         setTimeout(() => setHasCopied(false), 2000);
+      }).catch(err => {
+        console.error("Clipboard API failed, using fallback", err);
+        fallbackCopy(url);
       });
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } else {
+      fallbackCopy(url);
     }
+  };
+
+  const fallbackCopy = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        setHasCopied(true);
+        setTimeout(() => setHasCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
   };
 
   const fetchLeaderboard = async () => {
@@ -712,63 +735,68 @@ export default function App() {
                   </div>
                   <div className="hidden md:block text-[10px] font-black uppercase tracking-[0.4em] opacity-30">Player 02</div>
               </div>
+
+              {/* Game Winner Modal - Integrated into game view */}
+              <AnimatePresence>
+                {gameState.status === 'finished' && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: 1.2 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+                  >
+                    <motion.div 
+                      key="winner-modal"
+                      initial={{ scale: 0.9, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.9, y: 20 }}
+                      className={cn("max-w-md w-full p-10 md:p-14 rounded-3xl text-center space-y-8", cardClass)}
+                    >
+                       <div className="space-y-4">
+                          <div className={cn("w-20 h-20 mx-auto rounded-3xl flex items-center justify-center bg-blue-500/10 text-blue-500 shadow-inner")}>
+                            <Medal className="w-10 h-10" />
+                          </div>
+                          <div className="space-y-1">
+                            <h2 className="text-4xl font-display font-black tracking-tight uppercase">
+                              {gameState.winner === "Draw" ? "Equal Minds" : "Victory"}
+                            </h2>
+                            <p className="text-lg font-bold text-slate-500 uppercase tracking-widest">
+                              {gameState.winner === "Draw" ? "Stalemate" : `${gameState.winner} won`}
+                            </p>
+                          </div>
+                       </div>
+
+                       <div className="flex flex-col gap-3 w-full">
+                         <button 
+                          onClick={() => socket.emit("restart-game", roomCode)}
+                          className={cn(
+                            "w-full py-4 px-8 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
+                            isDarkMode 
+                              ? "bg-white text-slate-900 hover:bg-slate-100 shadow-white/5" 
+                              : "bg-slate-900 text-white hover:bg-slate-800 shadow-black/10"
+                          )}
+                         >
+                           <RefreshCw className="w-5 h-5" />
+                           Play Again
+                         </button>
+                         <button 
+                          onClick={() => setView("landing")} 
+                          className={cn(
+                            "w-full py-4 px-8 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
+                            isDarkMode
+                              ? "border-slate-700 text-slate-400 hover:bg-white/5 hover:text-white"
+                              : "border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                          )}
+                         >
+                           Exit to Menu
+                         </button>
+                       </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
-          )}
-
-          {view === "game" && gameState && gameState.status === 'finished' && (
-            <AnimatePresence>
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 1.5 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-              >
-                <motion.div 
-                  initial={{ scale: 0.95, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  className={cn("max-w-md w-full p-12 md:p-16 rounded-3xl text-center space-y-8", cardClass)}
-                >
-                   <div className="space-y-4">
-                      <div className={cn("w-20 h-20 mx-auto rounded-3xl flex items-center justify-center bg-blue-500/10 text-blue-500")}>
-                        <Medal className="w-10 h-10" />
-                      </div>
-                      <h2 className="text-4xl font-display font-black tracking-tight uppercase">
-                        {gameState.winner === "Draw" ? "Equal Minds" : "Victory"}
-                      </h2>
-                      <p className="text-lg font-bold text-slate-500 uppercase tracking-widest">
-                        {gameState.winner === "Draw" ? "Stalemate" : `${gameState.winner} won`}
-                      </p>
-                   </div>
-
-                   <div className="flex flex-col gap-3 w-full">
-                     <button 
-                      onClick={() => socket.emit("restart-game", roomCode)}
-                      className={cn(
-                        "w-full py-4 px-8 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
-                        isDarkMode 
-                          ? "bg-white text-slate-900 hover:bg-slate-100" 
-                          : "bg-slate-900 text-white hover:bg-slate-800"
-                      )}
-                     >
-                       <RefreshCw className="w-5 h-5" />
-                       Play Again
-                     </button>
-                     <button 
-                      onClick={() => setView("landing")} 
-                      className={cn(
-                        "w-full py-4 px-8 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border-2",
-                        isDarkMode
-                          ? "border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
-                          : "border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                     >
-                       Exit to Menu
-                     </button>
-                   </div>
-                </motion.div>
-              </motion.div>
-            </AnimatePresence>
           )}
 
           {view === "leaderboard" && (
