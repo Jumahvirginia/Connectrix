@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Outfit", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  
+  --color-charcoal-bg: #0A0A0A;
+  --color-charcoal-surface: #121212;
+  --color-charcoal-border: #1F1F1F;
+
+  --color-light-bg: #F8FAFC;
+  --color-light-surface: #FFFFFF;
+  --color-light-border: #E2E8F0;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased transition-colors duration-500 min-h-screen bg-charcoal-bg;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply rounded-2xl border transition-all duration-300;
+  }
+
+  .premium-card-dark {
+    @apply bg-charcoal-surface border-charcoal-border shadow-2xl;
+  }
+
+  .premium-card-light {
+    @apply bg-light-surface border-light-border shadow-sm;
+  }
+
+  .premium-button {
+    @apply px-6 py-3.5 rounded-xl font-display font-semibold text-sm tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-30 flex items-center justify-center gap-2;
+  }
+
+  .premium-input {
+    @apply w-full p-4 rounded-xl outline-none transition-all font-medium border-2;
+  }
+
+  /* Game Grid */
+  .slot-wrapper {
+    @apply aspect-square rounded-full flex items-center justify-center relative overflow-hidden;
+  }
+
+  .slot-inner-dark {
+    @apply bg-charcoal-bg border border-white/5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)];
+  }
+
+  .slot-inner-light {
+    @apply bg-slate-100 border border-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)];
+  }
+
+  .piece-drop {
+    @apply w-[82%] h-[82%] rounded-full shadow-lg border border-black/10;
+  }
+
+  .winning-glow {
+    @apply ring-4 ring-white/50 shadow-[0_0_25px_rgba(255,255,255,0.4)];
+  }
+}
