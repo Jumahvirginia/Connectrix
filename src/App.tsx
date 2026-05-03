@@ -161,41 +161,45 @@ export default function App() {
 
   const copyToClipboard = () => {
     if (!roomCode) return;
-    const url = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
     
-    // Check if we can use the modern clipboard API
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(url).then(() => {
-        setHasCopied(true);
-        setTimeout(() => setHasCopied(false), 2000);
-      }).catch(err => {
-        console.error("Clipboard API failed, using fallback", err);
-        fallbackCopy(url);
-      });
-    } else {
-      fallbackCopy(url);
-    }
-  };
-
-  const fallbackCopy = (text: string) => {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      const successful = document.execCommand('copy');
-      if (successful) {
-        setHasCopied(true);
-        setTimeout(() => setHasCopied(false), 2000);
+    // Construct URL with explicit origin and protocol
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const pathname = window.location.pathname;
+    const url = `${protocol}//${host}${pathname}?room=${roomCode}`;
+    
+    const doCopy = (text: string) => {
+      // Modern API
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
       }
-    } catch (err) {
-      console.error('Fallback copy failed', err);
-    }
-    document.body.removeChild(textArea);
+      // Fallback
+      return new Promise<void>((resolve, reject) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          const successful = document.execCommand('copy');
+          if (successful) resolve();
+          else reject(new Error('ExecCommand copy failed'));
+        } catch (err) {
+          reject(err);
+        }
+        document.body.removeChild(textArea);
+      });
+    };
+
+    doCopy(url).then(() => {
+      setHasCopied(true);
+      setTimeout(() => setHasCopied(false), 2000);
+    }).catch(err => {
+      console.error("Copy failed:", err);
+    });
   };
 
   const fetchLeaderboard = async () => {
@@ -482,17 +486,15 @@ export default function App() {
                                 <div className="w-4 h-4 shrink-0 rounded-full shadow-inner" style={{ backgroundColor: player.color }} />
                                 <span className="font-display font-bold text-sm tracking-tight truncate">{player.name}</span>
                              </div>
-                             {gameState.currentTurn === playerIndex && (
-                               <span className={cn("text-[10px] font-black", timeLeft < 10 ? "text-rose-500" : "opacity-50")}>{timeLeft}s</span>
-                             )}
+                             <span className={cn("text-[10px] font-black", timeLeft < 10 ? "text-rose-500" : (isDarkMode ? "text-slate-400" : "text-slate-500"), gameState.currentTurn !== playerIndex && "opacity-40")}>{timeLeft}s</span>
                           </div>
-                          {gameState.currentTurn === playerIndex ? (
-                            <div className="w-full h-1 bg-slate-500/20 rounded-full overflow-hidden">
-                               <motion.div initial={{ width: "100%" }} animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }} className={cn("h-full", timeLeft < 10 ? "bg-rose-500" : "bg-blue-500")} />
-                            </div>
-                          ) : (
-                            <div className="w-full h-1 opacity-0" />
-                          )}
+                          <div className={cn("w-full h-1 bg-slate-500/10 rounded-full overflow-hidden transition-opacity", gameState.currentTurn !== playerIndex && "opacity-40")}>
+                             <motion.div 
+                               initial={{ width: "100%" }} 
+                               animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }} 
+                               className={cn("h-full", timeLeft < 10 ? "bg-rose-500" : (isDarkMode ? "bg-blue-400" : "bg-blue-600"))} 
+                             />
+                          </div>
                        </div>
                     );
                  })}
@@ -514,23 +516,19 @@ export default function App() {
                      <div className="flex flex-col items-start md:items-center flex-1 min-w-0">
                        <span className="font-display font-black text-base md:text-lg uppercase tracking-tight truncate w-full text-left md:text-center">{gameState.players[0].name}</span>
                        <div className="w-full">
-                         {gameState.currentTurn === 0 ? (
-                           <div className="w-full space-y-1 md:space-y-2 mt-1 md:mt-2">
-                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-80 md:opacity-60">
-                                <span className="hidden md:inline">Time</span>
-                                <span className={cn(timeLeft < 10 && "text-rose-500")}>{timeLeft}s</span>
-                             </div>
-                             <div className="hidden md:block h-1.5 w-full bg-slate-500/20 rounded-full overflow-hidden">
-                                <motion.div 
-                                   initial={{ width: "100%" }}
-                                   animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }}
-                                   className={cn("h-full transition-colors", timeLeft < 10 ? "bg-rose-500" : "bg-blue-500")}
-                                />
-                             </div>
-                           </div>
-                         ) : (
-                           <div className="text-[10px] font-bold uppercase tracking-widest opacity-0 mt-1 md:mt-2 hidden md:block">Time</div>
-                         )}
+                         <div className={cn("w-full space-y-1 md:space-y-2 mt-1 md:mt-2 transition-opacity", gameState.currentTurn !== 0 && "opacity-40")}>
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-80 md:opacity-60">
+                               <span className="hidden md:inline">Time</span>
+                               <span className={cn(timeLeft < 10 ? "text-rose-500" : (isDarkMode ? "text-slate-400" : "text-slate-500"))}>{timeLeft}s</span>
+                            </div>
+                            <div className="hidden md:block h-1.5 w-full bg-slate-500/10 rounded-full overflow-hidden">
+                               <motion.div 
+                                  initial={{ width: "100%" }}
+                                  animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }}
+                                  className={cn("h-full transition-colors", timeLeft < 10 ? "bg-rose-500" : (isDarkMode ? "bg-blue-400" : "bg-blue-600"))}
+                               />
+                            </div>
+                         </div>
                        </div>
                      </div>
                   </div>
@@ -713,23 +711,19 @@ export default function App() {
                      <div className="flex flex-col items-start md:items-center flex-1 min-w-0">
                        <span className="font-display font-black text-base md:text-lg uppercase tracking-tight truncate w-full text-left md:text-center">{gameState.players[1]?.name || "Waiting..."}</span>
                        <div className="w-full">
-                         {gameState.currentTurn === 1 ? (
-                           <div className="w-full space-y-1 md:space-y-2 mt-1 md:mt-2">
-                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-80 md:opacity-60">
-                                <span className="hidden md:inline">Time</span>
-                                <span className={cn(timeLeft < 10 && "text-rose-500")}>{timeLeft}s</span>
-                             </div>
-                             <div className="hidden md:block h-1.5 w-full bg-slate-500/20 rounded-full overflow-hidden">
-                                <motion.div 
-                                   initial={{ width: "100%" }}
-                                   animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }}
-                                   className={cn("h-full transition-colors", timeLeft < 10 ? "bg-rose-500" : "bg-blue-500")}
-                                />
-                             </div>
-                           </div>
-                         ) : (
-                           <div className="text-[10px] font-bold uppercase tracking-widest opacity-0 mt-1 md:mt-2 hidden md:block">Time</div>
-                         )}
+                         <div className={cn("w-full space-y-1 md:space-y-2 mt-1 md:mt-2 transition-opacity", gameState.currentTurn !== 1 && "opacity-40")}>
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-80 md:opacity-60">
+                               <span className="hidden md:inline">Time</span>
+                               <span className={cn(timeLeft < 10 ? "text-rose-500" : (isDarkMode ? "text-slate-400" : "text-slate-500"))}>{timeLeft}s</span>
+                            </div>
+                            <div className="hidden md:block h-1.5 w-full bg-slate-500/10 rounded-full overflow-hidden">
+                               <motion.div 
+                                  initial={{ width: "100%" }}
+                                  animate={{ width: `${(timeLeft / gameState.turnDuration) * 100}%` }}
+                                  className={cn("h-full transition-colors", timeLeft < 10 ? "bg-rose-500" : (isDarkMode ? "bg-blue-400" : "bg-blue-600"))}
+                               />
+                            </div>
+                         </div>
                        </div>
                      </div>
                   </div>
@@ -737,21 +731,22 @@ export default function App() {
               </div>
 
               {/* Game Winner Modal - Integrated into game view */}
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {gameState.status === 'finished' && (
                   <motion.div 
+                    key={`winner-modal-${gameState.winner}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ delay: 1.2 }}
+                    transition={{ delay: 1.5 }}
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
                   >
                     <motion.div 
-                      key="winner-modal"
+                      key="winner-content"
                       initial={{ scale: 0.9, y: 20 }}
                       animate={{ scale: 1, y: 0 }}
                       exit={{ scale: 0.9, y: 20 }}
-                      className={cn("max-w-md w-full p-10 md:p-14 rounded-3xl text-center space-y-8", cardClass)}
+                      className={cn("max-w-md w-full p-10 md:p-14 rounded-3xl text-center space-y-8 shadow-2xl", cardClass)}
                     >
                        <div className="space-y-4">
                           <div className={cn("w-20 h-20 mx-auto rounded-3xl flex items-center justify-center bg-blue-500/10 text-blue-500 shadow-inner")}>

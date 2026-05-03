@@ -93,15 +93,25 @@ async function startServer() {
   });
 
   function updateStats(winnerName: string, loserName: string) {
-    if (winnerName === "CPU" || loserName === "CPU") return;
-    const stats = JSON.parse(fs.readFileSync(STATS_FILE, "utf-8"));
-    if (!stats.players[winnerName]) stats.players[winnerName] = { wins: 0, losses: 0 };
-    if (!stats.players[loserName]) stats.players[loserName] = { wins: 0, losses: 0 };
-    
-    stats.players[winnerName].wins += 1;
-    stats.players[loserName].losses += 1;
-    
-    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+    if (winnerName === "CPU" || loserName === "CPU" || winnerName === "Draw") return;
+    try {
+      let stats = { players: {} };
+      if (fs.existsSync(STATS_FILE)) {
+        const content = fs.readFileSync(STATS_FILE, "utf-8");
+        stats = JSON.parse(content || '{"players": {}}');
+      }
+      
+      if (!stats.players) stats.players = {};
+      if (!stats.players[winnerName]) stats.players[winnerName] = { wins: 0, losses: 0 };
+      if (!stats.players[loserName]) stats.players[loserName] = { wins: 0, losses: 0 };
+      
+      stats.players[winnerName].wins += 1;
+      stats.players[loserName].losses += 1;
+      
+      fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+    } catch (err) {
+      console.error("Critical error updating stats:", err);
+    }
   }
 
   io.on("connection", (socket) => {
