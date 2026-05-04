@@ -151,6 +151,7 @@ export default function App() {
   const handleJoin = () => {
     if (!username || (gameMode === "pvp" && !roomCode)) return;
     const finalRoomCode = gameMode === "solo" ? `SOLO-${Math.random().toString(36).substring(2, 6).toUpperCase()}` : roomCode.toUpperCase();
+    setRoomCode(finalRoomCode);
     socket.emit("join-room", { roomCode: finalRoomCode, name: username, color: selectedColor, mode: gameMode });
   };
 
