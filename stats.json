@@ -1,0 +1,36 @@
+{
+  "players": {
+    "kim": {
+      "wins": 1,
+      "losses": 0
+    },
+    "AI": {
+      "wins": 0,
+      "losses": 1
+    },
+    "kelly": {
+      "wins": 1,
+      "losses": 0
+    },
+    "Kim": {
+      "wins": 0,
+      "losses": 1
+    },
+    "k": {
+      "wins": 1,
+      "losses": 0
+    },
+    "h": {
+      "wins": 0,
+      "losses": 1
+    },
+    "j": {
+      "wins": 1,
+      "losses": 0
+    },
+    "r": {
+      "wins": 0,
+      "losses": 1
+    }
+  }
+}

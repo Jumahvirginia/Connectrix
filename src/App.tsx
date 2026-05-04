@@ -170,7 +170,7 @@ export default function App() {
     socket.emit("update-color", { roomCode, color });
   };
 
-  const currentOpponent = gameState?.players.find(p => p.id !== socket.id);
+  const currentOpponent = gameState?.players.find((p: Player) => p.id !== socket.id);
   const takenColor = currentOpponent?.color;
 
   const handleExit = () => {
@@ -337,7 +337,7 @@ export default function App() {
                     <input 
                       type="text" 
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                       className={cn("premium-input pl-12 h-14", inputClass)}
                       placeholder="e.g. StratMaster"
                     />
@@ -407,7 +407,7 @@ export default function App() {
                   onClick={gameMode === "solo" ? handleJoin : (roomAction === "create" ? handleCreate : handleJoin)}
                   disabled={!username || (gameMode === "pvp" && (!roomAction || (roomAction === "join" && !roomCode)))}
                   className={cn(
-                    "premium-button w-full h-14 !rounded-2xl shadow-xl shadow-blue-500/10",
+                    "premium-button w-full h-14 rounded-2xl! shadow-xl shadow-blue-500/10",
                     isDarkMode ? "bg-blue-600 text-white" : "bg-blue-600 text-white"
                   )}
                 >
@@ -516,7 +516,7 @@ export default function App() {
               key="game" 
               initial={{ opacity: 0, scale: 0.99 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="w-full flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-8 lg:gap-12 w-full"
+              className="w-full flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-8 lg:gap-12"
             >
               {/* Mobile Players Header */}
               <div className="w-full flex md:hidden justify-between items-center gap-3 px-2 order-1 max-w-md mx-auto">
@@ -600,7 +600,7 @@ export default function App() {
                         >
                           {/* Top Indicator / Move Drop Button */}
                           <div className={cn(
-                            "absolute -top-12 sm:-top-14 md:-top-[72px] left-0 w-full flex justify-center pb-2 transition-all duration-300 z-50",
+                            "absolute -top-12 sm:-top-14 md:-top-18 left-0 w-full flex justify-center pb-2 transition-all duration-300 z-50",
                             isClickable ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
                           )}>
                              <button 
@@ -640,7 +640,7 @@ export default function App() {
                                        initial={{ y: -450 }}
                                        animate={{ y: 0 }}
                                        transition={{ type: "spring", damping: 14, stiffness: 200 }}
-                                       className={cn("piece-drop z-10 w-full h-full rounded-full shadow-inner border-[4px] md:border-[6px] lg:border-[8px] border-black/10", isWinningPiece && "winning-glow")}
+                                       className={cn("piece-drop z-10 w-full h-full rounded-full shadow-inner border-4 md:border-6 lg:border-8 border-black/10", isWinningPiece && "winning-glow")}
                                        style={{ backgroundColor: player?.color }}
                                      />
                                    )}
@@ -789,7 +789,7 @@ export default function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: 1.5 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+                    className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
                   >
                     <motion.div 
                       key="winner-content"
@@ -884,7 +884,7 @@ export default function App() {
                             <tr key={stat.name} className="hover:bg-white/5 transition-colors">
                               <td className="px-8 py-8 font-display font-black text-xl text-slate-500">{(i+1).toString().padStart(2, '0')}</td>
                               <td className="px-8 py-8">
-                                <span className="font-display font-bold text-lg tracking-tight uppercase truncate max-w-[150px] inline-block">{stat.name}</span>
+                                <span className="font-display font-bold text-lg tracking-tight uppercase truncate max-w-37.5 inline-block">{stat.name}</span>
                               </td>
                               <td className="px-8 py-8">
                                 <span className="font-black text-emerald-500 text-xl">{stat.wins}</span>
