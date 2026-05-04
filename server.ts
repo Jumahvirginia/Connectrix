@@ -5,7 +5,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
 
-const PORT = 3000;
+// Use Render's dynamic port or default to 3000 for local dev
+const PORT = process.env.PORT || 3000;
 const STATS_FILE = path.join(process.cwd(), "stats.json");
 
 // Ensure stats file exists
@@ -43,7 +44,7 @@ async function startServer() {
   app.use(express.json());
   
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", env: process.env.NODE_ENV });
+    res.json({ status: "ok", env: process.env.NODE_ENV, render: !!process.env.RENDER });
   });
 
   // AI Logic: Simple Heuristic
@@ -102,11 +103,14 @@ async function startServer() {
       }
       
       if (!stats.players) stats.players = {};
-      if (!stats.players[winnerName]) stats.players[winnerName] = { wins: 0, losses: 0 };
-      if (!stats.players[loserName]) stats.players[loserName] = { wins: 0, losses: 0 };
+      const winStats = (stats.players as any)[winnerName] || { wins: 0, losses: 0 };
+      const loseStats = (stats.players as any)[loserName] || { wins: 0, losses: 0 };
       
-      stats.players[winnerName].wins += 1;
-      stats.players[loserName].losses += 1;
+      winStats.wins += 1;
+      loseStats.losses += 1;
+      
+      (stats.players as any)[winnerName] = winStats;
+      (stats.players as any)[loserName] = loseStats;
       
       fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
     } catch (err) {
@@ -136,7 +140,6 @@ async function startServer() {
       }
 
       if (room.players.length < 2) {
-        // Ensure color uniqueness
         let finalColor = color;
         const takenColors = room.players.map(p => p.color);
         if (takenColors.includes(finalColor)) {
@@ -150,7 +153,7 @@ async function startServer() {
         
         if (room.gameMode === "solo" && room.players.length === 1) {
           room.players.push({ id: "cpu", name: "AI", color: "#94a3b8", symbol: "O" });
-          room.status = "playing"; // Auto-start solo games
+          room.status = "playing"; 
           room.turnStartTime = Date.now();
         }
         
@@ -221,7 +224,6 @@ async function startServer() {
         room.turnStartTime = Date.now();
         io.to(roomCode).emit("room-update", room);
 
-        // Handle AI Move
         if (room.gameMode === "solo" && room.currentTurn === 1 && room.status === "playing") {
           setTimeout(() => {
             const aiMoveCol = getAIMove(room.board, "O", "X");
@@ -285,19 +287,16 @@ async function startServer() {
     });
   });
 
-  // Server-side loop to enforce the turn timers
   setInterval(() => {
     const now = Date.now();
     rooms.forEach((room, roomCode) => {
       if (room.status === "playing" && room.turnStartTime !== null && room.turnDuration > 0) {
         const elapsedSeconds = (now - room.turnStartTime) / 1000;
         if (elapsedSeconds >= room.turnDuration) {
-          // Timer expired! Current player forfeits.
           room.status = "finished";
           room.winner = room.players[1 - room.currentTurn].name;
           room.winningLine = [];
           const loser = room.players[room.currentTurn];
-          
           updateStats(room.winner, loser.name);
           io.to(roomCode).emit("room-update", room);
         }
@@ -309,17 +308,14 @@ async function startServer() {
     const directions = [
       [0, 1], [1, 0], [1, 1], [1, -1]
     ];
-    
     for (const [dr, dc] of directions) {
       let line: [number, number][] = [[row, col]];
-      // Check forward
       for (let i = 1; i < 4; i++) {
         const r = row + dr * i;
         const c = col + dc * i;
         if (r >= 0 && r < 6 && c >= 0 && c < 7 && board[r][c] === symbol) line.push([r, c]);
         else break;
       }
-      // Check backward
       for (let i = 1; i < 4; i++) {
         const r = row - dr * i;
         const c = col - dc * i;
@@ -331,21 +327,34 @@ async function startServer() {
     return null;
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  // --- FRONTEND SERVING LOGIC ---
+  const isProd = process.env.NODE_ENV === "production" || !!process.env.RENDER;
+
+  if (isProd) {
+    const distPath = path.join(process.cwd(), "dist");
+    // Serve static files from the build folder
+    app.use(express.static(distPath));
+
+    // Handle SPA routing: serve index.html for any unknown requests
+    app.get("*", (req, res) => {
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: "API Route not found" });
+      }
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    // Development mode with Vite middleware
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-  });
+// Force PORT to be a number to satisfy TypeScript
+httpServer.listen(Number(PORT), "0.0.0.0", () => {
+  console.log(`Connectrix Server running on port ${PORT} (${isProd ? 'production' : 'development'})`);
+});
 }
 
 startServer().catch(err => {
