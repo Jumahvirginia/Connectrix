@@ -597,7 +597,12 @@ export default function App() {
                       return (
                         <div 
                           key={colIndex} 
-                          className="flex flex-col gap-1 sm:gap-1.5 md:gap-3 group relative rounded-xl transition-all"
+                          className={cn("flex flex-col gap-1 sm:gap-1.5 md:gap-3 group relative rounded-xl transition-all", isClickable && "cursor-pointer")}
+                          onClick={() => {
+                            if (isClickable) {
+                              socket.emit("make-move", { roomCode: gameState.roomCode, colIndex });
+                            }
+                          }}
                         >
                           {/* Top Indicator / Move Drop Button */}
                           <div className={cn(
@@ -626,7 +631,7 @@ export default function App() {
                           </div>
 
                           {isClickable && (
-                            <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 md:group-hover:opacity-100 transition-opacity rounded-xl -m-1 pointer-events-none" />
+                            <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -m-1 pointer-events-none" />
                           )}
 
                           {[...Array(6)].map((_, rowIndex) => {
